@@ -1,3 +1,28 @@
-console.log('lol')
-var a
-console.log('my boi')
+require('dotenv').config()
+const api = require('./obaApi.js')
+const chalk = require('chalk')
+
+require('util').inspect.defaultOptions.depth = 2
+const fs = require('fs')
+
+// Express
+const express = require('express')
+const app = express()
+const port = 8080
+
+const obaApi = new api()
+
+obaApi
+  .getMore([2018])
+  .then(response => {
+    console.log(response)
+    fs.writeFile('json.json', response, 'utf-8', err => {
+      if (err) {
+        console.error(err)
+      }
+      console.log('File has been created')
+    })
+  })
+  .catch(err => {
+    console.log(err)
+  })
