@@ -42,7 +42,7 @@ module.exports = class api {
         let amountOfPages = Math.ceil(
           aantalBoeken.aquabrowser.meta[0].count[0] / 20
         )
-        if (page < amountOfPages || page < maxRequest) {
+        if (page < amountOfPages) {
           console.log(chalk.yellow(`Request to ${page}`))
           page++
           if (page < maxRequest + 1) {
