@@ -18,3 +18,15 @@ A timeline where every dot is a book. They are spaced when you launch the page f
 There are animations for removing dots, entering dots etc.
 
 The filters are based on the data avaliable and will load dynamicly, such as languages, authors. And maby some silly things as page count for books, or the amounts of words used in a summary, or the most common words used in a summary / title. Depending if it fits the theme.
+
+**Functions**
+
+Find unique key, desc or asc are optional
+
+```js
+uniqueKeys(data, 'year', asc)
+```
+
+Links
+
+[Forced layout d3](https://d3indepth.com/force-layout/)
