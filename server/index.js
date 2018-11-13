@@ -13,7 +13,7 @@ const port = 8080
 const obaApi = new api()
 
 obaApi
-  .getMore([2018])
+  .getMore([1])
   .then(response => {
     console.log(response)
 
@@ -32,15 +32,29 @@ obaApi
           ? book.summaries[0]['summary'][0]['_']
           : 'No summary',
         coverImage: book.coverimages[0]['coverimage'][0]['_'],
-        publication: book.publication[0]['year'][0]['_'],
+        type: book.formats ? book.formats[0]['format'][0]['_'] : 'No type',
+        publicationYear: book.publication[0]['year']
+          ? Number(book.publication[0]['year'][0]['_'])
+          : 'No publication year',
         mainAuthor: book.authors
           ? book.authors[0]['main-author'][0]['_']
           : 'No main-author',
-        language: book.languages[0].language
+        language: Array.isArray(book.languages)
           ? book.languages[0].language[0]['_']
           : 'No language',
-        physicalDescription:
-          book.description[0]['physical-description'][0]['_'],
+        // language: book.languages,
+        pages: book.description
+          ? book.description[0]['physical-description'][0]['_'].replace(
+              /(^\d+)(.+$)/i, //https://stackoverflow.com/questions/609574/get-the-first-ints-in-a-string-with-javascript
+              '$1'
+            )
+          : book.description,
+        // pages: Number(
+        //   book.description[0]['physical-description'][0]['_'].replace(
+        //     /(^\d+)(.+$)/i, //https://stackoverflow.com/questions/609574/get-the-first-ints-in-a-string-with-javascript
+        //     '$1'
+        //   )
+        // ),
         detailPage: book['detail-page'][0]
       }
     })
@@ -48,7 +62,7 @@ obaApi
   })
   .then(response => {
     console.log(response)
-    fs.writeFile('json.json', response, 'utf-8', err => {
+    fs.writeFile('erotica.json', JSON.stringify(response), 'utf-8', err => {
       if (err) {
         console.error(err)
       }

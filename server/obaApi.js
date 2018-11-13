@@ -18,14 +18,14 @@ module.exports = class api {
     function requestYear(year) {
       const all = []
       let page = 1
-      let maxRequest = 2
+      let maxRequest = 5
 
       return send()
 
       function send() {
         return axios
           .get(
-            `${base}?authorization=${publicKey}&q=book&facet=pubYear(${year})&refine=true&page=${page}&pagesize=20`
+            `${base}?authorization=${publicKey}&q=genre:erotiek&refine=true&page=${page}&pagesize=20`
           )
           .then(res => res.data)
           .then(convert.xmlDataToJSON)

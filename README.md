@@ -8,3 +8,13 @@ Import data to use
 - publication-year
 - languages
 - physical-description
+
+- Video of book?
+
+### First concept:
+
+A timeline where every dot is a book. They are spaced when you launch the page first you see the years ascending to today (last year). Based on different filters you can move the dots to their correct place on the X.
+
+There are animations for removing dots, entering dots etc.
+
+The filters are based on the data avaliable and will load dynamicly, such as languages, authors. And maby some silly things as page count for books, or the amounts of words used in a summary, or the most common words used in a summary / title. Depending if it fits the theme.
