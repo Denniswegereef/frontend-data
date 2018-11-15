@@ -45,6 +45,8 @@ d3.json('data.json').then(data => {
     .key(book => book.publicationYear)
     .entries(data)
 
+    console.log(yearsSorted);
+
   // Get the min and max year
   var maxYearsTotal = d3.max(yearsSorted, d => d.values.length)
 
@@ -64,6 +66,11 @@ d3.json('data.json').then(data => {
     .scaleBand()
     .range([0, width])
     .domain([0, yearsSorted.length])
+
+    const bandScaleY = d3
+      .scaleBand()
+      .range([0, height])
+      .domain([0, maxYearsTotal])
 
   // Axis X
   svg
@@ -85,16 +92,14 @@ d3.json('data.json').then(data => {
     .enter()
     .append('g')
     .attr('transform', d => `translate(${xScale(d.key)}, ${-10})`)
-
-  var dots = groups
     .selectAll('circle')
-    .data(d => d3.range(0, d.values.length))
+    .data(d => d.values.map(item => item))
     .enter()
     .append('circle')
     .attr('class', 'dot')
     .attr('r', 10)
-    .attr('cy', d => yScale(d))
-    .style('fill', 'blue')
+    .attr('cy', (d, i) => yScale(i))
+    .style('fill', d => yearColors[d.publicationYear])
 })
 
 function uniqueKeys(obj, key, sort) {
