@@ -29,4 +29,6 @@ uniqueKeys(data, 'year', asc)
 
 Links
 
-[Forced layout d3](https://d3indepth.com/force-layout/)
+<!-- [Forced layout d3](https://d3indepth.com/force-layout/) -->
+
+https://stackoverflow.com/questions/41215085/create-a-dot-chart-with-d3-js-showing-stacked-dots

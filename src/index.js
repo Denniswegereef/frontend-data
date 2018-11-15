@@ -1,88 +1,113 @@
-const data = [
-  {
-    day: 1,
-    apples: 3
-  },
-  {
-    day: 2,
-    apples: 10
-  },
-  {
-    day: 3,
-    apples: 15
-  },
-  {
-    day: 4,
-    apples: 2
-  },
-  {
-    day: 5,
-    apples: 10
-  },
-  {
-    day: 6,
-    apples: 19
-  },
-  {
-    day: 7,
-    apples: 20
-  }
-]
+'use strict'
 
-var margin = {
-    top: 30,
-    right: 20,
-    bottom: 30,
-    left: 50
-  },
-  width = 1000 - margin.left - margin.right,
-  height = 500 - margin.top - margin.bottom
+const margin = { top: 48, right: 72, bottom: 120, left: 72 }
 
-var svg = d3
-  .select('body')
-  .append('svg')
-  .attr('width', width + margin.left + margin.right)
-  .attr('height', height + margin.top + margin.bottom)
-  .append('g')
+const width = window.innerWidth - margin.left - margin.right,
+  height = 600
+
+const yearColors = {
+  '2000': '#4BB7C3',
+  '2001': '#41246B',
+  '2002': '#DABE90',
+  '2003': '#286977',
+  '2004': '#D071BD',
+  '2005': '#ECD7C6',
+  '2006': '#D1E7F0',
+  '2007': '#241132',
+  '2008': '#CD6A83',
+  '2009': '#44C1C1',
+  '2010': '#C3A54B',
+  '2011': '#E5D9F2',
+  '2012': '#852E8A',
+  '2013': '#B0713B',
+  '2014': '#BEC9E9',
+  '2015': '#8BD175',
+  '2016': '#3A501B',
+  '2017': '#163B41',
+  '2018': '#CFD47D'
+}
+
+const svg = d3.select('svg')
+
+const group = svg
+  .attr('width', width)
+  .attr('height', height)
   .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
-var chart = svg.append('g').attr('id', 'chart')
+d3.json('data.json').then(data => {
+  console.log(data)
+  console.log()
+  // get unique years
+  const uniqueYears = uniqueKeys(data, 'publicationYear', 'asc')
 
-var y = d3
-  .scaleLinear()
-  .range([height, 0])
-  .domain([0, 15]) // maxapples
+  const yearsSorted = d3
+    .nest()
+    .key(book => book.publicationYear)
+    .entries(data)
 
-const xScale = d3
-  .scaleLinear()
-  .domain([1, data.length])
-  .range([0, width])
+  // Get the min and max year
+  var maxYearsTotal = d3.max(yearsSorted, d => d.values.length)
 
-svg
-  .append('g')
-  .attr('class', 'x-axis')
-  .style('color', '#black')
-  .attr('transform', 'translate(0,' + height + ')')
-  .call(d3.axisBottom(xScale).ticks(data.length))
+  const svg = d3.select('svg')
 
-const bandScaleX = d3
-  .scaleBand()
-  .range([0, width])
-  .domain([0, data.length])
+  const yScale = d3
+    .scaleLinear()
+    .range([height, 0])
+    .domain([0, maxYearsTotal])
 
-var groups = svg
-  .selectAll('.groups')
-  .data(data)
-  .enter()
-  .append('g')
-  .attr('transform', d => `translate(${xScale(d.day)}, ${-10})`)
+  const xScale = d3
+    .scaleLinear()
+    .domain([2000, 2018])
+    .range([0, width])
 
-var dots = groups
-  .selectAll('circle')
-  .data(d => d3.range(0, d.apples))
-  .enter()
-  .append('circle')
-  .attr('class', 'dot')
-  .attr('r', 10)
-  .attr('cy', d => y(d))
-  .style('fill', 'blue')
+  const bandScaleX = d3
+    .scaleBand()
+    .range([0, width])
+    .domain([0, yearsSorted.length])
+
+  // Axis X
+  svg
+    .append('g')
+    .attr('class', 'x-axis')
+    .style('color', '#black')
+    .attr('transform', 'translate(0,' + height + ')')
+    .call(
+      d3
+        .axisBottom(xScale)
+        .ticks(15)
+        .tickFormat(d3.format('y'))
+    )
+
+  // Create groups for each year
+  const groups = svg
+    .selectAll('.groups')
+    .data(yearsSorted)
+    .enter()
+    .append('g')
+    .attr('transform', d => `translate(${xScale(d.key)}, ${-10})`)
+
+  var dots = groups
+    .selectAll('circle')
+    .data(d => d3.range(0, d.values.length))
+    .enter()
+    .append('circle')
+    .attr('class', 'dot')
+    .attr('r', 10)
+    .attr('cy', d => yScale(d))
+    .style('fill', 'blue')
+})
+
+function uniqueKeys(obj, key, sort) {
+  let unique = d3.map(obj, d => d[key]).keys()
+
+  // ascending
+  if (sort === 'asc') {
+    unique.sort((a, b) => a - b)
+  }
+  // descending
+  if (sort === 'desc') {
+    unique.sort((a, b) => b - a)
+  }
+
+  return unique
+}
