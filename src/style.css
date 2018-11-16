@@ -5,3 +5,7 @@ body {
 svg {
   overflow: visible;
 }
+
+.domain {
+  stroke: none;
+}

@@ -1,6 +1,11 @@
 'use strict'
 
-const margin = { top: 48, right: 72, bottom: 120, left: 72 }
+const margin = {
+  top: 48,
+  right: 72,
+  bottom: 120,
+  left: 72
+}
 
 const width = window.innerWidth - margin.left - margin.right,
   height = 600
@@ -35,71 +40,109 @@ const group = svg
   .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
 d3.json('data.json').then(data => {
-  console.log(data)
-  console.log()
-  // get unique years
-  const uniqueYears = uniqueKeys(data, 'publicationYear', 'asc')
-
   const yearsSorted = d3
     .nest()
     .key(book => book.publicationYear)
     .entries(data)
 
-    console.log(yearsSorted);
-
   // Get the min and max year
   var maxYearsTotal = d3.max(yearsSorted, d => d.values.length)
 
-  const svg = d3.select('svg')
+  let xScale = d3.scaleLinear().range([0, width])
 
   const yScale = d3
     .scaleLinear()
     .range([height, 0])
     .domain([0, maxYearsTotal])
 
-  const xScale = d3
-    .scaleLinear()
-    .domain([2000, 2018])
-    .range([0, width])
+  const bandScaleX = d3.scaleBand().range([0, width])
 
-  const bandScaleX = d3
+  const bandScaleY = d3
     .scaleBand()
-    .range([0, width])
-    .domain([0, yearsSorted.length])
+    .range([0, height])
+    .domain([0, maxYearsTotal])
 
-    const bandScaleY = d3
-      .scaleBand()
-      .range([0, height])
-      .domain([0, maxYearsTotal])
-
-  // Axis X
-  svg
-    .append('g')
-    .attr('class', 'x-axis')
-    .style('color', '#black')
-    .attr('transform', 'translate(0,' + height + ')')
-    .call(
-      d3
-        .axisBottom(xScale)
-        .ticks(15)
-        .tickFormat(d3.format('y'))
+  const dotSize = 10
+  document.getElementById('remove').addEventListener('click', remove)
+  function remove() {
+    update(
+      yearsSorted.slice(
+        0,
+        Math.floor(Math.random() * Math.floor(yearsSorted.length))
+      )
     )
+  }
+  // d3.interval(function(){
+  //     update(yearsSorted.slice(0, Math.floor(Math.random() * Math.floor(yearsSorted.length))))
+  // }, 2500)
 
-  // Create groups for each year
-  const groups = svg
-    .selectAll('.groups')
-    .data(yearsSorted)
-    .enter()
-    .append('g')
-    .attr('transform', d => `translate(${xScale(d.key)}, ${-10})`)
-    .selectAll('circle')
-    .data(d => d.values.map(item => item))
-    .enter()
-    .append('circle')
-    .attr('class', 'dot')
-    .attr('r', 10)
-    .attr('cy', (d, i) => yScale(i))
-    .style('fill', d => yearColors[d.publicationYear])
+  update(yearsSorted)
+
+  // const uniqueYears = uniqueKeys(data, 'publicationYear', 'asc')
+
+  function update(sortedData) {
+    // get unique years
+    // const uniqueYears = uniqueKeys(sortedData, 'publicationYear', 'asc')
+
+    updateScale(sortedData)
+
+    const groups = svg.selectAll('.group').data(sortedData)
+
+    groups.exit().remove()
+
+    groups
+      .attr('transform', (d, i) => {
+        console.log('LOG')
+        return d.values.length > 1
+          ? `translate(${xScale(d.key) - dotSize}, ${-10})`
+          : `translate(${xScale(d.key)}, ${-10})`
+      })
+      .enter()
+      .append('g')
+      .attr('class', 'group')
+      .attr('transform', (d, i) => {
+        console.log('LOG')
+        return d.values.length > 1
+          ? `translate(${xScale(d.key) - dotSize}, ${-10})`
+          : `translate(${xScale(d.key)}, ${-10})`
+      })
+
+    const circles = d3
+      .selectAll('.group')
+      .selectAll('circle')
+      .data(d => d.values.map(item => item))
+      .enter()
+      .append('circle')
+      .attr('class', 'dot')
+      .attr('r', dotSize)
+      .attr('cy', (d, i) => yScale(Math.floor(i / 2)))
+      .attr('cx', (d, i) => (i % 2 ? dotSize * 2 : 0))
+      .style('fill', d => yearColors[d.publicationYear])
+  }
+
+  function updateScale(updatedData) {
+    const min = d3.min(updatedData.map(d => d.key))
+    const max = d3.max(updatedData.map(d => d.key))
+
+    bandScaleX.domain([0, updatedData.length])
+    console.log(updatedData.length)
+
+    xScale.domain([min, max])
+
+    const axis = d3.selectAll('.x-axis').remove()
+
+    svg
+      .append('g')
+      .attr('class', 'x-axis')
+      .style('color', '#black')
+      .attr('transform', 'translate(0,' + (height + 4) + ')')
+      .call(
+        d3
+          .axisBottom(xScale)
+          .ticks(updatedData.length)
+          .tickFormat(d3.format('y'))
+      )
+  }
 })
 
 function uniqueKeys(obj, key, sort) {

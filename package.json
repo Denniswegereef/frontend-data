@@ -17,7 +17,7 @@
     "xo": "^0.23.0"
   },
   "scripts": {
-    "format": "prettier --write \"server/**/*.js\"",
+    "format": "prettier --write \"src/**/*.js\"",
     "data": "node_modules/.bin/nodemon server/index.js",
     "xo": "xo"
   },
