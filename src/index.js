@@ -52,34 +52,54 @@ d3.json('data.json').then(data => {
   filterSystem(data)
 
   function filterSystem(allData) {
-    const uniqueTypes = uniqueKeys(allData, 'type', 'asc')
-    const uniqueLanguages = uniqueKeys(allData, 'language', 'asc')
-
-    console.log(allData)
-
     d3.select('#visualisation')
       .append('div')
       .attr('class', 'filterElement')
 
-    const filterElement = d3.select('.filterElement')
+    createUniqueFilter('type', 'checkbox')
+    createUniqueFilter('language', 'radio')
+  }
 
-    filterElement.append('h3').text('Unique types')
-    filterElement
+  function createUniqueFilter(attr, eleType) {
+    const filterElement = d3.select('.filterElement')
+    const unique = uniqueKeys(data, attr, 'asc')
+
+    const singleItem = filterElement
+      .append('div')
+      .attr('class', attr)
+      .append('h4')
+      .text(attr)
+
+    d3.select(`.${attr}`)
       .selectAll('input')
-      .data(uniqueTypes)
+      .data(unique)
       .enter()
       .append('label')
       .attr('for', d => d)
       .text(d => d)
       .append('input')
-      .attr('type', 'checkbox')
+      .attr('name', attr)
+      .attr('type', eleType)
       .attr('id', d => d)
-      .on('click', d => filteredOptionsChange('type', d))
+      .attr('checked', function(d) {
+        if (eleType === 'radio') {
+          this.checked ? true : false
+        }
+      })
+      .on('click', d => filteredOptionsChange(attr, d))
   }
 
   function filteredOptionsChange(type, attr) {
+    let unique = 'language'
+
     let newType = `${type}:${attr.toLowerCase()}`
     let newTypeIndex = filteredOptions.indexOf(newType)
+
+    if (type === unique) {
+      filteredOptions.forEach((item, index) => {
+        filteredOptions.splice(index, 1)
+      })
+    }
 
     newTypeIndex > -1
       ? filteredOptions.splice(newTypeIndex, 1)
@@ -90,26 +110,27 @@ d3.json('data.json').then(data => {
 
   function updateFiltered() {
     const filteredData = data.filter(item => {
-      if (
-        filteredOptions.forEach(option => {
-          let splittedOption = option.split(':')
-
-          if (item[splittedOption[0]] === splittedOption[1]) {
-            console.log('found')
-            return true
-          }
-        })
-      ) {
+      if (checkIfOptionsMatch(item)) {
         return item
       }
     })
+    // Als er nikls
+    filteredData.length > 0 ? update(filteredData) : update(data)
+  }
 
-    console.log(filteredData)
-    // const filteredData = data.filter(item => {
-    //   console.log(item)
-    // })
+  function checkIfOptionsMatch(item) {
+    let matchingOptions = 0
 
-    update(filteredData)
+    filteredOptions.forEach(option => {
+      let splittedOption = option.split(':')
+
+      if (item[splittedOption[0]] === splittedOption[1]) {
+        matchingOptions++
+      }
+    })
+    if (matchingOptions === filteredOptions.length) {
+      return true
+    }
   }
 
   function update(newData) {
@@ -147,13 +168,17 @@ d3.json('data.json').then(data => {
       .selectAll('.group')
       .selectAll('circle')
       .data(d => d.values.map(item => item))
+
+    circles.exit().remove()
+
+    circles
       .enter()
       .append('circle')
       .attr('class', 'dot')
       .attr('r', dotSize)
       .attr('cy', (d, i) => yScale(Math.floor(i / 2)))
       .attr('cx', (d, i) => (i % 2 ? dotSize * 2 : 0))
-      .style('fill', d => yearColors[d.publicationYear])
+      .style('fill', d => 'red')
   }
 
   function getXposition(d) {
@@ -180,28 +205,10 @@ d3.json('data.json').then(data => {
       .call(
         d3
           .axisBottom(xScale)
-          .ticks(max - min)
+          .ticks(max - (min - 1))
           .tickFormat(d3.format('y'))
       )
   }
-  //
-  // document.getElementById('remove').addEventListener('click', remove)
-  // function remove() {
-  //   update(
-  //     yearsSorted.slice(
-  //       0,
-  //       Math.floor(Math.random() * Math.ceil(yearsSorted.length))
-  //     )
-  //   )
-  // }
-
-  // d3.interval(function() {
-  //   const newYears = yearsSorted.slice(
-  //     0,
-  //     Math.floor(Math.random() * Math.ceil(yearsSorted.length))
-  //   )
-  //   update(newYears)
-  // }, 2000)
 })
 
 function uniqueKeys(obj, key, sort) {
