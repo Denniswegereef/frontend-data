@@ -7,6 +7,8 @@ const margin = {
   left: 72
 }
 
+const dotSize = 10
+
 const width = window.innerWidth - margin.left - margin.right,
   height = 600
 
@@ -31,7 +33,6 @@ const yearColors = {
   '2017': '#163B41',
   '2018': '#CFD47D'
 }
-
 const svg = d3.select('svg')
 
 const group = svg
@@ -39,73 +40,108 @@ const group = svg
   .attr('height', height)
   .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
+const filteredOptions = []
+
 d3.json('data.json').then(data => {
-  const yearsSorted = d3
-    .nest()
-    .key(book => book.publicationYear)
-    .entries(data)
-
-  // Get the min and max year
-  var maxYearsTotal = d3.max(yearsSorted, d => d.values.length)
-
-  let xScale = d3.scaleLinear().range([0, width])
-
-  const yScale = d3
-    .scaleLinear()
-    .range([height, 0])
-    .domain([0, maxYearsTotal])
+  const uniqueYears = uniqueKeys(data, 'publicationYear', 'asc')
 
   const bandScaleX = d3.scaleBand().range([0, width])
+  let xScale = d3.scaleLinear().range([0, width])
 
-  const bandScaleY = d3
-    .scaleBand()
-    .range([0, height])
-    .domain([0, maxYearsTotal])
+  update(data)
+  filterSystem(data)
 
-  const dotSize = 10
-  document.getElementById('remove').addEventListener('click', remove)
-  function remove() {
-    update(
-      yearsSorted.slice(
-        0,
-        Math.floor(Math.random() * Math.floor(yearsSorted.length))
-      )
-    )
+  function filterSystem(allData) {
+    const uniqueTypes = uniqueKeys(allData, 'type', 'asc')
+    const uniqueLanguages = uniqueKeys(allData, 'language', 'asc')
+
+    console.log(allData)
+
+    d3.select('#visualisation')
+      .append('div')
+      .attr('class', 'filterElement')
+
+    const filterElement = d3.select('.filterElement')
+
+    filterElement.append('h3').text('Unique types')
+    filterElement
+      .selectAll('input')
+      .data(uniqueTypes)
+      .enter()
+      .append('label')
+      .attr('for', d => d)
+      .text(d => d)
+      .append('input')
+      .attr('type', 'checkbox')
+      .attr('id', d => d)
+      .on('click', d => filteredOptionsChange('type', d))
   }
-  // d3.interval(function(){
-  //     update(yearsSorted.slice(0, Math.floor(Math.random() * Math.floor(yearsSorted.length))))
-  // }, 2500)
 
-  update(yearsSorted)
+  function filteredOptionsChange(type, attr) {
+    let newType = `${type}:${attr.toLowerCase()}`
+    let newTypeIndex = filteredOptions.indexOf(newType)
 
-  // const uniqueYears = uniqueKeys(data, 'publicationYear', 'asc')
+    newTypeIndex > -1
+      ? filteredOptions.splice(newTypeIndex, 1)
+      : filteredOptions.push(newType)
 
-  function update(sortedData) {
-    // get unique years
-    // const uniqueYears = uniqueKeys(sortedData, 'publicationYear', 'asc')
+    updateFiltered()
+  }
 
-    updateScale(sortedData)
+  function updateFiltered() {
+    const filteredData = data.filter(item => {
+      if (
+        filteredOptions.forEach(option => {
+          let splittedOption = option.split(':')
 
-    const groups = svg.selectAll('.group').data(sortedData)
+          if (item[splittedOption[0]] === splittedOption[1]) {
+            console.log('found')
+            return true
+          }
+        })
+      ) {
+        return item
+      }
+    })
+
+    console.log(filteredData)
+    // const filteredData = data.filter(item => {
+    //   console.log(item)
+    // })
+
+    update(filteredData)
+  }
+
+  function update(newData) {
+    const yearsSorted = d3
+      .nest()
+      .key(book => book.publicationYear)
+      .entries(newData)
+
+    // Get the min and max year
+    var maxYearsTotal = d3.max(yearsSorted, d => d.values.length)
+
+    const yScale = d3
+      .scaleLinear()
+      .range([height, 0])
+      .domain([0, maxYearsTotal])
+    const bandScaleY = d3
+      .scaleBand()
+      .range([0, height])
+      .domain([0, maxYearsTotal])
+
+    updateScale(yearsSorted)
+
+    const groups = svg.selectAll('.group').data(yearsSorted)
 
     groups.exit().remove()
 
+    groups.attr('transform', d => getXposition(d))
     groups
-      .attr('transform', (d, i) => {
-        console.log('LOG')
-        return d.values.length > 1
-          ? `translate(${xScale(d.key) - dotSize}, ${-10})`
-          : `translate(${xScale(d.key)}, ${-10})`
-      })
       .enter()
       .append('g')
       .attr('class', 'group')
-      .attr('transform', (d, i) => {
-        console.log('LOG')
-        return d.values.length > 1
-          ? `translate(${xScale(d.key) - dotSize}, ${-10})`
-          : `translate(${xScale(d.key)}, ${-10})`
-      })
+      .attr('transform', d => getXposition(d))
 
     const circles = d3
       .selectAll('.group')
@@ -120,12 +156,17 @@ d3.json('data.json').then(data => {
       .style('fill', d => yearColors[d.publicationYear])
   }
 
+  function getXposition(d) {
+    return d.values.length > 1
+      ? `translate(${xScale(d.key) - dotSize}, ${-dotSize})`
+      : `translate(${xScale(d.key)}, ${-dotSize})`
+  }
+
   function updateScale(updatedData) {
     const min = d3.min(updatedData.map(d => d.key))
     const max = d3.max(updatedData.map(d => d.key))
 
     bandScaleX.domain([0, updatedData.length])
-    console.log(updatedData.length)
 
     xScale.domain([min, max])
 
@@ -139,10 +180,28 @@ d3.json('data.json').then(data => {
       .call(
         d3
           .axisBottom(xScale)
-          .ticks(updatedData.length)
+          .ticks(max - min)
           .tickFormat(d3.format('y'))
       )
   }
+  //
+  // document.getElementById('remove').addEventListener('click', remove)
+  // function remove() {
+  //   update(
+  //     yearsSorted.slice(
+  //       0,
+  //       Math.floor(Math.random() * Math.ceil(yearsSorted.length))
+  //     )
+  //   )
+  // }
+
+  // d3.interval(function() {
+  //   const newYears = yearsSorted.slice(
+  //     0,
+  //     Math.floor(Math.random() * Math.ceil(yearsSorted.length))
+  //   )
+  //   update(newYears)
+  // }, 2000)
 })
 
 function uniqueKeys(obj, key, sort) {
