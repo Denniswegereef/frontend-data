@@ -29,6 +29,13 @@ Find unique key, desc or asc are optional
 uniqueKeys(data, 'year', asc)
 ```
 
+To do:
+
+- [ ] Visual appealing
+- [ ] Labels
+- [ ] Animation
+- [ ] Add more data for filters
+
 Links
 
 <!-- [Forced layout d3](https://d3indepth.com/force-layout/) -->

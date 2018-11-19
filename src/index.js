@@ -7,7 +7,8 @@ const margin = {
   left: 72
 }
 
-const dotSize = 10
+const dotSize = 8
+const dotSpacing = 2.5
 
 const width = window.innerWidth - margin.left - margin.right,
   height = 600
@@ -46,7 +47,9 @@ d3.json('data.json').then(data => {
   const uniqueYears = uniqueKeys(data, 'publicationYear', 'asc')
 
   const bandScaleX = d3.scaleBand().range([0, width])
-  let xScale = d3.scaleLinear().range([0, width])
+  const xScale = d3.scaleLinear().range([0, width])
+  const yScale = d3.scaleLinear().range([height, 0])
+  const bandScaleY = d3.scaleBand().range([0, height])
 
   update(data)
   filterSystem(data)
@@ -139,18 +142,6 @@ d3.json('data.json').then(data => {
       .key(book => book.publicationYear)
       .entries(newData)
 
-    // Get the min and max year
-    var maxYearsTotal = d3.max(yearsSorted, d => d.values.length)
-
-    const yScale = d3
-      .scaleLinear()
-      .range([height, 0])
-      .domain([0, maxYearsTotal])
-    const bandScaleY = d3
-      .scaleBand()
-      .range([0, height])
-      .domain([0, maxYearsTotal])
-
     updateScale(yearsSorted)
 
     const groups = svg.selectAll('.group').data(yearsSorted)
@@ -168,8 +159,7 @@ d3.json('data.json').then(data => {
       .selectAll('.group')
       .selectAll('circle')
       .data(d => d.values.map(item => item))
-
-    circles.exit().remove()
+      .style('stroke', d => yearColors[d.publicationYear])
 
     circles
       .enter()
@@ -177,8 +167,19 @@ d3.json('data.json').then(data => {
       .attr('class', 'dot')
       .attr('r', dotSize)
       .attr('cy', (d, i) => yScale(Math.floor(i / 2)))
-      .attr('cx', (d, i) => (i % 2 ? dotSize * 2 : 0))
-      .style('fill', d => 'red')
+      .attr('cx', (d, i) => (i % 2 ? dotSize * 2 + dotSpacing : 0))
+      .style('fill', '#fff')
+      .style('stroke', d => yearColors[d.publicationYear])
+      .attr('stroke-width', 4)
+      .on('mouseover', function(d) {
+        d3.select(this).style('fill', yearColors[d.publicationYear])
+      })
+      .on('mouseout', function(d) {
+        d3.select(this).style('fill', '#fff')
+        d3.select(this).attr('r', dotSize)
+      })
+
+    circles.exit().remove()
   }
 
   function getXposition(d) {
@@ -191,7 +192,14 @@ d3.json('data.json').then(data => {
     const min = d3.min(updatedData.map(d => d.key))
     const max = d3.max(updatedData.map(d => d.key))
 
+    // Get the min and max year
+    const maxYearsTotal = d3.max(updatedData, d => d.values.length)
+
     bandScaleX.domain([0, updatedData.length])
+
+    yScale.domain([0, maxYearsTotal])
+
+    bandScaleY.domain([0, maxYearsTotal])
 
     xScale.domain([min, max])
 
