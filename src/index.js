@@ -42,17 +42,28 @@ const group = svg
   .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
 const filteredOptions = []
+let currentGraph = 'publicationYear'
 
 d3.json('data.json').then(data => {
+  console.log(data)
+
   const uniqueYears = uniqueKeys(data, 'publicationYear', 'asc')
 
-  const bandScaleX = d3.scaleBand().range([0, width])
-  const xScale = d3.scaleLinear().range([0, width])
-  const yScale = d3.scaleLinear().range([height, 0])
-  const bandScaleY = d3.scaleBand().range([0, height])
+  let xScale
+  let yScale = d3.scaleLinear().range([height, 0])
+  let bandScaleY = d3.scaleBand().range([0, height])
 
-  update(data)
+  update(data, currentGraph)
   filterSystem(data)
+
+  document.querySelector('#year').addEventListener('click', changeAxis)
+  document.querySelector('#type').addEventListener('click', changeAxis)
+  document.querySelector('#language').addEventListener('click', changeAxis)
+
+  function changeAxis(attr) {
+    update(data, this.innerHTML)
+    currentGraph = this.innerHTML
+  }
 
   function filterSystem(allData) {
     d3.select('#visualisation')
@@ -108,17 +119,20 @@ d3.json('data.json').then(data => {
       ? filteredOptions.splice(newTypeIndex, 1)
       : filteredOptions.push(newType)
 
-    updateFiltered()
+    updateFiltered(type)
   }
 
-  function updateFiltered() {
+  function updateFiltered(type) {
     const filteredData = data.filter(item => {
       if (checkIfOptionsMatch(item)) {
         return item
       }
     })
     // Als er nikls
-    filteredData.length > 0 ? update(filteredData) : update(data)
+    console.log(type)
+    filteredData.length > 0
+      ? update(filteredData, currentGraph)
+      : update(data, currentGraph)
   }
 
   function checkIfOptionsMatch(item) {
@@ -136,19 +150,21 @@ d3.json('data.json').then(data => {
     }
   }
 
-  function update(newData) {
-    const yearsSorted = d3
+  function update(newData, attr) {
+    const sortedYearsByAttr = d3
       .nest()
-      .key(book => book.publicationYear)
+      .key(book => book[attr])
       .entries(newData)
 
-    updateScale(yearsSorted)
+    updateScale(sortedYearsByAttr, attr)
 
-    const groups = svg.selectAll('.group').data(yearsSorted)
+    const groups = svg
+      .selectAll('.group')
+      .data(sortedYearsByAttr)
+      .attr('transform', d => getXposition(d))
 
     groups.exit().remove()
 
-    groups.attr('transform', d => getXposition(d))
     groups
       .enter()
       .append('g')
@@ -183,39 +199,55 @@ d3.json('data.json').then(data => {
   }
 
   function getXposition(d) {
-    return d.values.length > 1
-      ? `translate(${xScale(d.key) - dotSize}, ${-dotSize})`
-      : `translate(${xScale(d.key)}, ${-dotSize})`
+    console.log(d.key, +' ' + xScale(d.key))
+    if (Number.isInteger(Number(d.key))) {
+      return d.values.length >= 1
+        ? `translate(${xScale(d.key) - dotSize}, ${-dotSize})`
+        : `translate(${xScale(d.key)}, ${-dotSize})`
+    } else {
+      return `translate(${xScale(d.key)}, ${-dotSize})`
+    }
   }
 
-  function updateScale(updatedData) {
-    const min = d3.min(updatedData.map(d => d.key))
-    const max = d3.max(updatedData.map(d => d.key))
-
-    // Get the min and max year
+  function updateScale(updatedData, attr) {
+    let min, max
     const maxYearsTotal = d3.max(updatedData, d => d.values.length)
 
-    bandScaleX.domain([0, updatedData.length])
+    min = d3.min(updatedData.map(d => d.key))
+    max = d3.max(updatedData.map(d => d.key))
 
+    // console.log(updatedData[0].key)
+    if (Number.isInteger(Number(updatedData[0].key))) {
+      console.log('scale is in numbers')
+
+      xScale = d3.scaleLinear()
+      xScale.domain([min, max])
+    } else {
+      console.log('scale is in strings')
+
+      xScale = d3.scalePoint()
+      xScale.domain(updatedData.map(d => d.key))
+    }
+    xScale.range([0, width])
+    // Get the min and max year
     yScale.domain([0, maxYearsTotal])
-
     bandScaleY.domain([0, maxYearsTotal])
 
-    xScale.domain([min, max])
-
     const axis = d3.selectAll('.x-axis').remove()
-
-    svg
+    const bottomAxis = svg
       .append('g')
       .attr('class', 'x-axis')
       .style('color', '#black')
       .attr('transform', 'translate(0,' + (height + 4) + ')')
-      .call(
-        d3
-          .axisBottom(xScale)
-          .ticks(max - (min - 1))
-          .tickFormat(d3.format('y'))
-      )
+
+    Number.isInteger(Number(updatedData[0].key))
+      ? bottomAxis.call(
+          d3
+            .axisBottom(xScale)
+            .ticks(max - (min - 1))
+            .tickFormat(d3.format('y'))
+        )
+      : bottomAxis.call(d3.axisBottom(xScale).ticks(updatedData.length))
   }
 })
 
