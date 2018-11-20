@@ -8,7 +8,7 @@ const margin = {
 }
 
 const dotSize = 8
-const dotSpacing = 2.5
+const dotSpacing = 5
 
 const width = window.innerWidth - margin.left - margin.right,
   height = 600
@@ -44,14 +44,23 @@ const group = svg
 const filteredOptions = []
 let currentGraph = 'publicationYear'
 
+const div = d3
+  .select('body')
+  .append('div')
+  .attr('class', 'tooltip')
+  .style('opacity', 0)
+
 d3.json('data.json').then(data => {
+  data.forEach((item, index) => {
+    data[index].pages = +item.pages
+  })
+
   console.log(data)
 
   const uniqueYears = uniqueKeys(data, 'publicationYear', 'asc')
 
   let xScale
   let yScale = d3.scaleLinear().range([height, 0])
-  let bandScaleY = d3.scaleBand().range([0, height])
 
   update(data, currentGraph)
   filterSystem(data)
@@ -176,21 +185,30 @@ d3.json('data.json').then(data => {
       .selectAll('circle')
       .data(d => d.values.map(item => item))
       .style('stroke', d => yearColors[d.publicationYear])
-
     circles
       .enter()
       .append('circle')
       .attr('class', 'dot')
       .attr('r', dotSize)
-      .attr('cy', (d, i) => yScale(Math.floor(i / 2)))
+      .attr('cy', (d, i) => {
+        return yScale(Math.floor(i / 2))
+      })
       .attr('cx', (d, i) => (i % 2 ? dotSize * 2 + dotSpacing : 0))
       .style('fill', '#fff')
       .style('stroke', d => yearColors[d.publicationYear])
       .attr('stroke-width', 4)
       .on('mouseover', function(d) {
         d3.select(this).style('fill', yearColors[d.publicationYear])
+
+        div.style('opacity', 0.9)
+        div
+          .html(d.title)
+          .style('left', d3.event.pageX + 'px')
+          .style('top', d3.event.pageY - 28 + 'px')
       })
       .on('mouseout', function(d) {
+        div.style('opacity', 0)
+
         d3.select(this).style('fill', '#fff')
         d3.select(this).attr('r', dotSize)
       })
@@ -199,9 +217,8 @@ d3.json('data.json').then(data => {
   }
 
   function getXposition(d) {
-    console.log(d.key, +' ' + xScale(d.key))
-    if (Number.isInteger(Number(d.key))) {
-      return d.values.length >= 1
+    if (checkIfNumber(d.key)) {
+      return d.values.length > 1
         ? `translate(${xScale(d.key) - dotSize}, ${-dotSize})`
         : `translate(${xScale(d.key)}, ${-dotSize})`
     } else {
@@ -210,28 +227,33 @@ d3.json('data.json').then(data => {
   }
 
   function updateScale(updatedData, attr) {
-    let min, max
     const maxYearsTotal = d3.max(updatedData, d => d.values.length)
 
-    min = d3.min(updatedData.map(d => d.key))
-    max = d3.max(updatedData.map(d => d.key))
+    let min = d3.min(updatedData.map(d => d.key))
+    let max = d3.max(updatedData.map(d => d.key))
 
-    // console.log(updatedData[0].key)
-    if (Number.isInteger(Number(updatedData[0].key))) {
-      console.log('scale is in numbers')
+    if (checkIfNumber(updatedData[0].key)) {
+      console.log('Scale is in numbers')
 
       xScale = d3.scaleLinear()
       xScale.domain([min, max])
+      xScale.range([0, width])
     } else {
-      console.log('scale is in strings')
+      console.log('Scale is in strings')
 
       xScale = d3.scalePoint()
       xScale.domain(updatedData.map(d => d.key))
     }
-    xScale.range([0, width])
-    // Get the min and max year
+
+    function calculateRange() {
+      if (updatedData.length > 10) {
+        return width
+      }
+      return width * (updatedData.length / 10)
+    }
+
+    xScale.range([0, calculateRange()])
     yScale.domain([0, maxYearsTotal])
-    bandScaleY.domain([0, maxYearsTotal])
 
     const axis = d3.selectAll('.x-axis').remove()
     const bottomAxis = svg
@@ -239,17 +261,20 @@ d3.json('data.json').then(data => {
       .attr('class', 'x-axis')
       .style('color', '#black')
       .attr('transform', 'translate(0,' + (height + 4) + ')')
-
-    Number.isInteger(Number(updatedData[0].key))
+    checkIfNumber(updatedData[0].key)
       ? bottomAxis.call(
           d3
             .axisBottom(xScale)
-            .ticks(max - (min - 1))
+            .ticks(max - (min - 1) > 20 ? 20 : max - (min - 1))
             .tickFormat(d3.format('y'))
         )
       : bottomAxis.call(d3.axisBottom(xScale).ticks(updatedData.length))
   }
 })
+
+function checkIfNumber(dataItem) {
+  return Number.isInteger(Number(dataItem))
+}
 
 function uniqueKeys(obj, key, sort) {
   let unique = d3.map(obj, d => d[key]).keys()
