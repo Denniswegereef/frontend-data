@@ -185,21 +185,21 @@ d3.json('data.json').then(data => {
       .selectAll('circle')
       .data(d => d.values.map(item => item))
       .style('stroke', d => yearColors[d.publicationYear])
+
+    circles.exit().remove()
+
     circles
       .enter()
       .append('circle')
       .attr('class', 'dot')
-      .attr('r', dotSize)
       .attr('cy', (d, i) => {
         return yScale(Math.floor(i / 2))
       })
       .attr('cx', (d, i) => (i % 2 ? dotSize * 2 + dotSpacing : 0))
       .style('fill', '#fff')
       .style('stroke', d => yearColors[d.publicationYear])
-      .attr('stroke-width', 4)
       .on('mouseover', function(d) {
         d3.select(this).style('fill', yearColors[d.publicationYear])
-
         div.style('opacity', 0.9)
         div
           .html(d.title)
@@ -212,8 +212,13 @@ d3.json('data.json').then(data => {
         d3.select(this).style('fill', '#fff')
         d3.select(this).attr('r', dotSize)
       })
-
-    circles.exit().remove()
+      .attr('stroke-width', 1)
+      .attr('r', 0)
+      .transition()
+      .duration(300)
+      .attr('r', dotSize)
+      .duration(300)
+      .attr('stroke-width', 4)
   }
 
   function getXposition(d) {
@@ -260,7 +265,16 @@ d3.json('data.json').then(data => {
       .append('g')
       .attr('class', 'x-axis')
       .style('color', '#black')
-      .attr('transform', 'translate(0,' + (height + 4) + ')')
+      .attr('transform', 'translate(-10,' + height + ')')
+      .attr('r', 0)
+
+    d3.selectAll('.x-axis')
+      .select('text')
+      .style('color', 'red')
+    // .transition()
+    // .duration(500)
+    // .attr('transform', 'translate(0,' + (height + 4) + ')')
+
     checkIfNumber(updatedData[0].key)
       ? bottomAxis.call(
           d3

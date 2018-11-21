@@ -6,9 +6,9 @@ svg {
   overflow: visible;
 }
 
-.domain {
+/* .domain {
   stroke: none;
-}
+} */
 
 .filterElement {
   position: absolute;
