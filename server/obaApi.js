@@ -18,7 +18,7 @@ module.exports = class api {
     function requestYear(year) {
       const all = []
       let page = 1
-      let maxRequest = 5
+      let maxRequest = 10
 
       return send()
 

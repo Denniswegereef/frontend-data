@@ -7,55 +7,55 @@ const margin = {
   left: 72
 }
 
-const dotSize = 8
+const dotSize = 7
 const dotSpacing = 5
+const dotBreak = 25
+const dotBreakDistance = 20
+const dotStrokeRadius = 4
 
-const width = window.innerWidth - margin.left - margin.right,
+const width =
+    window.innerWidth < 1000
+      ? window.innerWidth - margin.left - margin.right
+      : 1000,
   height = 600
 
-const yearColors = {
-  '2000': '#4BB7C3',
-  '2001': '#41246B',
-  '2002': '#DABE90',
-  '2003': '#286977',
-  '2004': '#D071BD',
-  '2005': '#ECD7C6',
-  '2006': '#D1E7F0',
-  '2007': '#241132',
-  '2008': '#CD6A83',
-  '2009': '#44C1C1',
-  '2010': '#C3A54B',
-  '2011': '#E5D9F2',
-  '2012': '#852E8A',
-  '2013': '#B0713B',
-  '2014': '#BEC9E9',
-  '2015': '#8BD175',
-  '2016': '#3A501B',
-  '2017': '#163B41',
-  '2018': '#CFD47D'
-}
+// Color scheme
+const color = d3
+  .scaleLinear()
+  .domain([2000, 2005, 2010, 2015, 2020])
+  .range(['#8C489F', '#B39BC8', '#F172A1', '#A1C3D1', '#E64398'])
+
 const svg = d3.select('svg')
 
 const group = svg
-  .attr('width', width)
+  .attr('width', width > 1000 ? 1000 : width)
   .attr('height', height)
   .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
+// Start variables
 const filteredOptions = []
+let activeItem
+let activeLanguageFilter
 let currentGraph = 'publicationYear'
 
+// Tooltip div
 const div = d3
   .select('body')
   .append('div')
   .attr('class', 'tooltip')
   .style('opacity', 0)
+  .style('color', '#fff')
 
-d3.json('data.json').then(data => {
+d3.json('dataToTheMax.json').then(data => {
+  data = data.slice(0, 155)
   data.forEach((item, index) => {
     data[index].pages = +item.pages
   })
 
-  console.log(data)
+  const scalePoint = d3
+    .scaleLinear()
+    .domain([0, dotBreak])
+    .range([0, height])
 
   const uniqueYears = uniqueKeys(data, 'publicationYear', 'asc')
 
@@ -70,12 +70,16 @@ d3.json('data.json').then(data => {
   document.querySelector('#language').addEventListener('click', changeAxis)
 
   function changeAxis(attr) {
+    if (document.querySelector('.activeAxis')) {
+      document.querySelector('.activeAxis').classList.remove('activeAxis')
+    }
+    this.classList.add('activeAxis')
     update(data, this.innerHTML)
     currentGraph = this.innerHTML
   }
 
   function filterSystem(allData) {
-    d3.select('#visualisation')
+    d3.select('#options')
       .append('div')
       .attr('class', 'filterElement')
 
@@ -95,6 +99,7 @@ d3.json('data.json').then(data => {
 
     d3.select(`.${attr}`)
       .selectAll('input')
+      .attr('class', 'lang')
       .data(unique)
       .enter()
       .append('label')
@@ -104,12 +109,16 @@ d3.json('data.json').then(data => {
       .attr('name', attr)
       .attr('type', eleType)
       .attr('id', d => d)
-      .attr('checked', function(d) {
-        if (eleType === 'radio') {
-          this.checked ? true : false
+      .on('click', function(d) {
+        if (activeLanguageFilter === d) {
+          this.checked = false
         }
+        if (this.type === 'radio') {
+          activeLanguageFilter = d
+        }
+
+        filteredOptionsChange(attr, d)
       })
-      .on('click', d => filteredOptionsChange(attr, d))
   }
 
   function filteredOptionsChange(type, attr) {
@@ -138,7 +147,6 @@ d3.json('data.json').then(data => {
       }
     })
     // Als er nikls
-    console.log(type)
     filteredData.length > 0
       ? update(filteredData, currentGraph)
       : update(data, currentGraph)
@@ -165,12 +173,18 @@ d3.json('data.json').then(data => {
       .key(book => book[attr])
       .entries(newData)
 
+    d3.select('.singleBook').remove()
+    div.style('opacity', 0)
+
     updateScale(sortedYearsByAttr, attr)
 
     const groups = svg
       .selectAll('.group')
       .data(sortedYearsByAttr)
-      .attr('transform', d => getXposition(d))
+      .attr(
+        'transform',
+        d => `translate(${xScale(d.key) - dotSize}, ${-dotSize})`
+      )
 
     groups.exit().remove()
 
@@ -178,57 +192,128 @@ d3.json('data.json').then(data => {
       .enter()
       .append('g')
       .attr('class', 'group')
-      .attr('transform', d => getXposition(d))
+      .attr(
+        'transform',
+        d => `translate(${xScale(d.key) - dotSize}, ${-dotSize})`
+      )
 
     const circles = d3
       .selectAll('.group')
       .selectAll('circle')
       .data(d => d.values.map(item => item))
-      .style('stroke', d => yearColors[d.publicationYear])
+      .style('stroke', d => color(d.publicationYear))
 
     circles.exit().remove()
+
+    circles
+      .attr('r', 0)
+      .transition()
+      .duration(500)
+      .attr('r', dotSize)
 
     circles
       .enter()
       .append('circle')
       .attr('class', 'dot')
-      .attr('cy', (d, i) => {
-        return yScale(Math.floor(i / 2))
-      })
-      .attr('cx', (d, i) => (i % 2 ? dotSize * 2 + dotSpacing : 0))
-      .style('fill', '#fff')
-      .style('stroke', d => yearColors[d.publicationYear])
       .on('mouseover', function(d) {
-        d3.select(this).style('fill', yearColors[d.publicationYear])
-        div.style('opacity', 0.9)
+        // Dot
+        d3.select(this)
+          .style('fill', color(d.publicationYear))
+          .transition()
+          .attr('r', dotSize * 1.5)
+
+        // Mouse over
         div
           .html(d.title)
-          .style('left', d3.event.pageX + 'px')
-          .style('top', d3.event.pageY - 28 + 'px')
+          .style('left', d3.event.pageX + dotSize + 4 + 'px')
+          .style('top', d3.event.pageY - 25 + 'px')
+          .transition()
+          .style('opacity', 0.9)
+          .style('background', color(d.publicationYear))
+          .style('box-shadow', `0 0 50px 2px ${color(d.publicationYear)}`)
       })
       .on('mouseout', function(d) {
-        div.style('opacity', 0)
+        if (d.title === activeItem) {
+          d3.select(this)
+            .style('fill', color(d.publicationYear))
+            .transition()
+            .attr('r', dotSize * 1.5)
+        } else {
+          d3.select(this)
+            .style('fill', 'none')
+            .transition()
+            .attr('r', dotSize)
+        }
 
-        d3.select(this).style('fill', '#fff')
-        d3.select(this).attr('r', dotSize)
+        // Mouse over
+        div.style('opacity', 0).style('box-shadow', `0 0 50px 2px none`)
       })
-      .attr('stroke-width', 1)
+      .on('click', function(d) {
+        d3.selectAll('circle')
+          .style('fill', 'none')
+          .transition()
+          .attr('r', dotSize)
+
+        d3.select(this)
+          .style('fill', color(d.publicationYear))
+          .transition()
+          .attr('r', dotSize * 1.5)
+
+        activeItem = d.title
+        showSingle(d)
+      })
+      .attr('cy', (d, i) => {
+        return height - scalePoint(i % dotBreak)
+      })
+      .attr('cx', (d, i) => {
+        return Math.floor(i / dotBreak) * dotBreakDistance
+      })
+      .style('stroke', (d, i) => color(d.publicationYear))
+      .attr('stroke-width', dotStrokeRadius)
+      .style('fill', 'none')
       .attr('r', 0)
       .transition()
-      .duration(300)
+      .duration(500)
       .attr('r', dotSize)
-      .duration(300)
-      .attr('stroke-width', 4)
   }
 
-  function getXposition(d) {
-    if (checkIfNumber(d.key)) {
-      return d.values.length > 1
-        ? `translate(${xScale(d.key) - dotSize}, ${-dotSize})`
-        : `translate(${xScale(d.key)}, ${-dotSize})`
-    } else {
-      return `translate(${xScale(d.key)}, ${-dotSize})`
-    }
+  function showSingle(item) {
+    d3.select('.singleBook').remove()
+    d3.select('#options')
+      .append('div')
+      .attr('class', 'singleBook')
+
+    const singleBook = d3.select('.singleBook')
+    singleBook
+      .append('div')
+      .attr('class', 'bookCover')
+      .append('img')
+      .attr('src', item.coverImage)
+    singleBook
+      .append('div')
+      .attr('class', 'bookText')
+      .append('h4')
+      .text(item.title)
+
+    d3.select('.bookText')
+      .append('p')
+      .html(
+        `Language: <span>${item.language}</span> | author: <span>${
+          item.mainAuthor
+        }</span> | publication year: <span>${
+          item.publicationYear
+        }</span> | type: <span>${item.type}</span>`
+      )
+
+    d3.select('.bookText')
+      .append('p')
+      .text(item.summary)
+
+    d3.select('.bookText')
+      .append('a')
+      .attr('target', '_blank')
+      .attr('href', item.detailPage)
+      .text('Link to OBA')
   }
 
   function updateScale(updatedData, attr) {
@@ -254,7 +339,7 @@ d3.json('data.json').then(data => {
       if (updatedData.length > 10) {
         return width
       }
-      return width * (updatedData.length / 10)
+      return width * (updatedData.length / 5)
     }
 
     xScale.range([0, calculateRange()])
@@ -266,20 +351,16 @@ d3.json('data.json').then(data => {
       .attr('class', 'x-axis')
       .style('color', '#black')
       .attr('transform', 'translate(-10,' + height + ')')
-      .attr('r', 0)
+      .transition()
+      .attr('transform', 'translate(-10,' + (height + 10) + ')')
 
-    d3.selectAll('.x-axis')
-      .select('text')
-      .style('color', 'red')
-    // .transition()
-    // .duration(500)
-    // .attr('transform', 'translate(0,' + (height + 4) + ')')
+    bottomAxis.select('text').style('color', 'red')
 
     checkIfNumber(updatedData[0].key)
       ? bottomAxis.call(
           d3
             .axisBottom(xScale)
-            .ticks(max - (min - 1) > 20 ? 20 : max - (min - 1))
+            .ticks(max - (min - 1))
             .tickFormat(d3.format('y'))
         )
       : bottomAxis.call(d3.axisBottom(xScale).ticks(updatedData.length))
