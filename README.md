@@ -101,24 +101,42 @@ In the code there is much going on, I've tried to put some comments by some part
 
 There are some interesting functions that needs some highlighting.
 
-`createUniqueFilter('type', 'checkbox')`
+```js
+createUniqueFilter('type', 'checkbox')
+```
+
 Renders based on the type you give it, such as `publicationYear` or `type`. It renders all the possible options as `checkbox` but there is also support for `radio` buttons.
 
 This filter does alot more than just render the filtered items. It also makes a array of all the filters currently active and updates the data accordingly and rerenders the page when a checkbox or radio button is pressed. If there is a already filter active when it's unique, it throws the other one out, really neat 😱
 
-`update(data, type)`
+```js
+update(data, type)
+```
+
 The big one which is needed for updating the data. It rerenders if needed all the data and the scales accordingly on how you wanna update it. It also triggers to update the scale properly how much data there is available.
 
-`updateScale(sortedYearsByAttr, attr)`
+```js
+updateScale(sortedYearsByAttr, attr)
+```
+
 The update scale, it can transform in a `linearScale` or `ordinalScale` based on which data is needed. Words are placed on the ordinal and numbers are on the linear. Makes it very flexible to change scales really fast if there is a type you wanna use.
 
-`showSingle`
+```js
+showSingle()
+```
+
 Renders a single book to the page where the user can read the title and the summary. Also it shows the attributes of the book and provides a link to the orginal page on the OBA website where it can be found.
 
-`checkIfNumber(dataItem)`
+```js
+checkIfNumber(dataItem)
+```
+
 Some short helper function which transforms any string and check if it is a number, this part is needed for updating scales accordingly.
 
-`uniqueKeys(obj, key, sort)`
+```js
+uniqueKeys(obj, key, sort)
+```
+
 You want to put on your scale only the uqique keys and no doubles. This filters it and gives a array of all the unique ones back. It needs a `data` property such as a array of all individual books, a `key` where you wanna filter on and a sort that can be `asc` or `desc`.
 
 That are some of the core features of my application but there are some small helpfull things. Such as when the single rounds reacht the top it breaks and goes on on the next line starting again from 0.
