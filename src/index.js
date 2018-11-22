@@ -13,6 +13,11 @@ const dotBreak = 25
 const dotBreakDistance = 20
 const dotStrokeRadius = 4
 
+// x-axis button change
+document.querySelector('#year').addEventListener('click', changeAxis)
+document.querySelector('#type').addEventListener('click', changeAxis)
+document.querySelector('#language').addEventListener('click', changeAxis)
+
 const width =
     window.innerWidth < 1000
       ? window.innerWidth - margin.left - margin.right
@@ -46,7 +51,7 @@ const div = d3
   .style('opacity', 0)
   .style('color', '#fff')
 
-d3.json('dataToTheMax.json').then(data => {
+d3.json('data.json').then(data => {
   data = data.slice(0, 155)
   data.forEach((item, index) => {
     data[index].pages = +item.pages
@@ -62,13 +67,11 @@ d3.json('dataToTheMax.json').then(data => {
   let xScale
   let yScale = d3.scaleLinear().range([height, 0])
 
+  // Call update for first render, append all the filters
   update(data, currentGraph)
   filterSystem(data)
 
-  document.querySelector('#year').addEventListener('click', changeAxis)
-  document.querySelector('#type').addEventListener('click', changeAxis)
-  document.querySelector('#language').addEventListener('click', changeAxis)
-
+  // Change X axis and call update
   function changeAxis(attr) {
     if (document.querySelector('.activeAxis')) {
       document.querySelector('.activeAxis').classList.remove('activeAxis')
@@ -78,15 +81,18 @@ d3.json('dataToTheMax.json').then(data => {
     currentGraph = this.innerHTML
   }
 
+  // Start filter
   function filterSystem(allData) {
     d3.select('#options')
       .append('div')
       .attr('class', 'filterElement')
 
+    // Create filter
     createUniqueFilter('type', 'checkbox')
     createUniqueFilter('language', 'radio')
   }
 
+  // Render all filters
   function createUniqueFilter(attr, eleType) {
     const filterElement = d3.select('.filterElement')
     const unique = uniqueKeys(data, attr, 'asc')
@@ -121,8 +127,9 @@ d3.json('dataToTheMax.json').then(data => {
       })
   }
 
+  // Make array of filters
   function filteredOptionsChange(type, attr) {
-    let unique = 'language'
+    let unique = 'language' // Needed because one possible answer
 
     let newType = `${type}:${attr.toLowerCase()}`
     let newTypeIndex = filteredOptions.indexOf(newType)
@@ -140,18 +147,22 @@ d3.json('dataToTheMax.json').then(data => {
     updateFiltered(type)
   }
 
+  // Filter everything away
   function updateFiltered(type) {
     const filteredData = data.filter(item => {
       if (checkIfOptionsMatch(item)) {
         return item
       }
     })
-    // Als er nikls
+
+    // If there are no results show all the data
+    // (need work, need a message that shows 'nothing matches' such as that)
     filteredData.length > 0
       ? update(filteredData, currentGraph)
       : update(data, currentGraph)
   }
 
+  // Filter loop through everything in array
   function checkIfOptionsMatch(item) {
     let matchingOptions = 0
 
@@ -167,6 +178,7 @@ d3.json('dataToTheMax.json').then(data => {
     }
   }
 
+  // Update function to render data
   function update(newData, attr) {
     const sortedYearsByAttr = d3
       .nest()
@@ -176,6 +188,7 @@ d3.json('dataToTheMax.json').then(data => {
     d3.select('.singleBook').remove()
     div.style('opacity', 0)
 
+    // Update scale
     updateScale(sortedYearsByAttr, attr)
 
     const groups = svg
@@ -277,6 +290,7 @@ d3.json('dataToTheMax.json').then(data => {
       .attr('r', dotSize)
   }
 
+  // Append single book to bottom
   function showSingle(item) {
     d3.select('.singleBook').remove()
     d3.select('#options')
@@ -316,6 +330,7 @@ d3.json('dataToTheMax.json').then(data => {
       .text('Link to OBA')
   }
 
+  // Update all scales correctly
   function updateScale(updatedData, attr) {
     const maxYearsTotal = d3.max(updatedData, d => d.values.length)
 
