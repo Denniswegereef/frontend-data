@@ -13,11 +13,6 @@ const dotBreak = 25
 const dotBreakDistance = 20
 const dotStrokeRadius = 4
 
-// x-axis button change
-document.querySelector('#year').addEventListener('click', changeAxis)
-document.querySelector('#type').addEventListener('click', changeAxis)
-document.querySelector('#language').addEventListener('click', changeAxis)
-
 const width =
     window.innerWidth < 1000
       ? window.innerWidth - margin.left - margin.right
@@ -70,6 +65,11 @@ d3.json('data.json').then(data => {
   // Call update for first render, append all the filters
   update(data, currentGraph)
   filterSystem(data)
+
+  // x-axis button change
+  document.querySelector('#year').addEventListener('click', changeAxis)
+  document.querySelector('#type').addEventListener('click', changeAxis)
+  document.querySelector('#language').addEventListener('click', changeAxis)
 
   // Change X axis and call update
   function changeAxis(attr) {
